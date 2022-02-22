@@ -1,0 +1,828 @@
+﻿---
+title: "YubiMamiya_bilingualism"
+output: pdf_document
+---
+
+
+```{r, results='hide'}
+library(tidyverse)
+library(gridExtra)
+library(cowplot)
+library(R.matlab)
+library(data.table)
+library(readxl)#Converting list to a dataframe/table
+```
+
+
+The dataframe KL_df contains the variables that are needed for this analysis. Therefore, we will continue using KL_df in this project.
+
+
+
+
+```{r}
+load("data/KL_df.Rdata") #contains Stroop, Flanker, and questionnaire data.
+subjects_NLP_sentence<-read_csv("/Users/Documents/NLP_Bilingualism/BehavioralData/Stroop_Flanker/Bilingualism_NLP_behaivor/formatted_data.csv")
+
+
+subjects_NLP_sentence<-subjects_NLP_sentence%>%
+  select(Modified_UserID, UserID,`Q1_,`:Q1_WC, `Q2_,`:Q2_WC,`Q3_,`:Q3_WC,`Q4_,`:Q4_WC,`Q5_,`:Q5_WC,`Q6_,`:Q6_WC,`Q7_,`:Q7_WC,
+         `Q8_,`:Q8_WC,`Q9_,`:Q9_WC,`Q10_,`:Q10_WC,`Q11_,`:Q11_WC,`Q12_,`:Q12_WC,`Q13_,`:Q13_WC,
+         `Q14_,`:Q14_WC, `Q15_,`:Q15_WC, `Q16_,`:Q16_WC, `Q17_,`:Q17_WC,`Q18_,`:Q18_WC)%>%
+  slice(1:70)%>%
+  rename(`Subject_ID`=`Modified_UserID`)
+
+
+subjects_NLP_sentence<-subjects_NLP_sentence%>%
+  mutate(Subject_ID = paste("AIB_", Subject_ID, sep=""))
+```
+
+
+
+
+
+
+```{r}
+# Number of sentences in each image
+
+
+Subjects_num_sentences<-subjects_NLP_sentence%>%
+  select(Subject_ID,ends_with('WC'),ends_with('_,'), ends_with('_.')) %>%
+  rowwise() %>%
+  mutate(avg_wc = mean(c(Q1_WC, Q2_WC, Q3_WC,Q4_WC, Q5_WC, Q6_WC, Q7_WC, Q8_WC, Q9_WC,
+                         Q11_WC, Q11_WC, Q12_WC,Q13_WC, Q14_WC, Q15_WC, Q16_WC, Q17_WC, Q18_WC), na.rm = TRUE)) %>%
+    mutate(avg_coma = mean(c(`Q1_,`, `Q2_,`, `Q3_,`,`Q4_,`, `Q5_,`, `Q6_,`, `Q7_,`, `Q8_,`, `Q9_,`,
+                         `Q11_,`, `Q11_,`, `Q12_,`,`Q13_,`, `Q14_,`, `Q15_,`, `Q16_,`, `Q17_,`, `Q18_,`), na.rm = TRUE)) %>%
+    mutate(avg_period = mean(c(`Q1_.`, `Q2_.`, `Q3_.`,`Q4_.`, `Q5_.`, `Q6_.`, `Q7_.`, `Q8_.`, `Q9_,`,
+                         `Q11_.`, `Q11_.`, `Q12_.`,`Q13_.`, `Q14_.`, `Q15_.`, `Q16_.`, `Q17_.`, `Q18_.`), na.rm = TRUE)) 
+
+
+write.csv(Subjects_num_sentences, file = "/Users/Documents/NLP_Bilingualism/BehavioralData/Stroop_Flanker/Bilingualism_NLP_behaivor/data/Subjectgs_num_sentences.csv")
+```
+
+
+
+
+```{r}
+# lexical choices
+Subjects_lexical<-subjects_NLP_sentence%>%
+  select(Subject_ID,ends_with('EX'),ends_with('IN'), ends_with('JJR'),ends_with('RP'),ends_with('VBG'),ends_with('VBZ')) %>%
+  rowwise() %>%
+  mutate(avg_EX = mean(c(Q1_EX, Q2_EX, Q3_EX,Q4_EX, Q5_EX, Q6_EX, Q7_EX, Q8_EX, Q9_EX,
+                         Q11_EX, Q11_EX, Q12_EX,Q13_EX, Q14_EX, Q15_EX, Q16_EX, Q17_EX, Q18_EX), na.rm = TRUE)) %>%
+    mutate(avg_IN = mean(c(`Q1_IN`, `Q2_IN`, `Q3_IN`,`Q4_IN`, `Q5_IN`, `Q6_IN`, `Q7_IN`, `Q8_IN`, `Q9_IN`,`Q11_IN`, `Q11_IN`, `Q12_IN`,`Q13_IN`, `Q14_IN`, `Q15_IN`, `Q16_IN`, `Q17_IN`, `Q18_IN`), na.rm = TRUE)) %>%
+    mutate(avg_JJR = mean(c(`Q1_JJR`, `Q2_JJR`, `Q3_JJR`,`Q4_JJR`, `Q5_JJR`, `Q6_JJR`, `Q7_JJR`, `Q8_JJR`, `Q9_JJR`,`Q11_JJR`, `Q11_JJR`, `Q12_JJR`,`Q13_JJR`, `Q14_JJR`, `Q15_JJR`, `Q16_JJR`, `Q17_JJR`, `Q18_JJR`), na.rm = TRUE)) %>%
+    mutate(avg_RP = mean(c(Q1_RP, Q2_RP, Q3_RP,Q4_RP, Q5_RP, Q6_RP, Q7_RP, Q8_RP, Q9_RP,
+                         Q11_RP, Q11_RP, Q12_RP,Q13_RP, Q14_RP, Q15_RP, Q16_RP, Q17_RP, Q18_RP), na.rm = TRUE)) %>%
+    mutate(avg_VBG = mean(c(`Q1_VBG`, `Q2_VBG`, `Q3_VBG`,`Q4_VBG`, `Q5_VBG`, `Q6_VBG`, `Q7_VBG`, `Q8_VBG`, `Q9_VBG`,`Q11_VBG`, `Q11_VBG`, `Q12_VBG`,`Q13_VBG`, `Q14_VBG`, `Q15_VBG`, `Q16_VBG`, `Q17_VBG`, `Q18_VBG`), na.rm = TRUE)) %>%
+    mutate(avg_VBZ = mean(c(`Q1_VBZ`, `Q2_VBZ`, `Q3_VBZ`,`Q4_VBZ`, `Q5_VBZ`, `Q6_VBZ`, `Q7_VBZ`, `Q8_VBZ`, `Q9_VBZ`,`Q11_VBZ`, `Q11_VBZ`, `Q12_VBZ`,`Q13_VBZ`, `Q14_VBZ`, `Q15_VBZ`, `Q16_VBZ`, `Q17_VBZ`, `Q18_VBZ`), na.rm = TRUE)) 
+
+
+write.csv(Subjects_lexical, file = "/Users/Documents/NLP_Bilingualism/BehavioralData/Stroop_Flanker/Bilingualism_NLP_behaivor/data/Subjects_lexical.csv")
+```
+
+
+```{r}
+#read in Stroop and Flanker error rates. Created in MATLAB on July 6, 2021
+Stroop_errors <-readMat("/Users/Documents/NLP_Bilingualism/BehavioralData/Stroop_ErrorRate_06July2021.mat")
+Stroop_Congruent_Correct<-as.data.frame(Stroop_errors[1])
+Stroop_Congruent_Incorrect<-as.data.frame(Stroop_errors[2])
+Stroop_Incongruent_Correct<-as.data.frame(Stroop_errors[3])
+Stroop_Incongruent_Incorrect<-as.data.frame(Stroop_errors[4])
+Stroop_ID<-Stroop_errors[[5]]
+Stroop_ID<-as.vector(unlist(Stroop_ID))
+Stroop_ID<-substr(Stroop_ID,start = 1,stop = 7)
+
+
+Stroop_ErrorRate<-cbind(Stroop_ID, Stroop_Congruent_Correct, Stroop_Congruent_Incorrect, Stroop_Incongruent_Correct, Stroop_Incongruent_Incorrect)
+
+
+Stroop_ErrorRate<-Stroop_ErrorRate%>%
+  rename(Stroop_Congruent_correct_rate = rate.Congruent.correct.v,
+         Stroop_Congruent_incorrect_rate = rate.Congruent.incorrect.v,
+         Stroop_Incongruent_correct_rate = rate.InCongruent.correct.v,
+         Stroop_Incongruent_incorrect_rate = rate.InCongruent.incorrect.v,
+         Subject_ID = Stroop_ID) %>%
+  mutate(Subject_ID = as.character(Subject_ID))
+
+
+write.csv(Stroop_ErrorRate, file = "/Users/Documents/NLP_Bilingualism/BehavioralData/Stroop_Flanker/Bilingualism_NLP_behaivor/data/Stroop_ErrorRate.csv")
+```
+
+
+
+
+
+
+```{r}
+Flanker_errors <-readMat("/Users/Documents/NLP_Bilingualism/BehavioralData/Flanker_ErrorRate_06July2021.mat")
+Flanker_Congruent_Correct<-as.data.frame(Flanker_errors[1])
+Flanker_Congruent_Incorrect<-as.data.frame(Flanker_errors[2])
+Flanker_Incongruent_Correct<-as.data.frame(Flanker_errors[3])
+Flanker_Incongruent_Incorrect<-as.data.frame(Flanker_errors[4])
+Flanker_ID<-Flanker_errors[[5]]
+Flanker_ID<-as.vector(unlist(Flanker_ID))
+Flanker_ID<-substr(Flanker_ID,start = 1,stop = 7)
+
+
+Flanker_ErrorRate<-cbind(Flanker_ID, Flanker_Congruent_Correct, Flanker_Congruent_Incorrect, Flanker_Incongruent_Correct, Flanker_Incongruent_Incorrect)
+
+
+Flanker_ErrorRate<-Flanker_ErrorRate%>%
+  rename(Flanker_Congruent_correct_rate = rate.Congruent.correct.v,
+         Flanker_Congruent_incorrect_rate = rate.Congruent.incorrect.v,
+         Flanker_Incongruent_correct_rate = rate.InCongruent.correct.v,
+         Flanker_Incongruent_incorrect_rate = rate.InCongruent.incorrect.v,
+         Subject_ID = Flanker_ID) %>%
+  mutate(Subject_ID = as.character(Subject_ID))
+
+
+write.csv(Flanker_ErrorRate, file = "/Users/Documents/NLP_Bilingualism/BehavioralData/Stroop_Flanker/Bilingualism_NLP_behaivor/data/Flanker_ErrorRate.csv")
+```
+
+
+```{r}
+#subjects_TimeWords <-read_xlsx("/Users/Documents/NLP_Bilingualism/BehavioralData/Stroop_Flanker/Bilingualism_NLP_behaivor/SpeechTranscription_22Nov2020.xlsx", sheet = "TimeWords")
+```
+
+
+```{r}
+#subjects_TimeWords
+#subjects_SwitchingPauses
+#subjects_TotalTime
+
+
+YM_df<-KL_df%>%
+  left_join(Subjects_num_sentences)
+
+
+YM_df<-YM_df%>%
+  left_join(Subjects_lexical)
+
+
+YM_df<-YM_df%>%
+  left_join(subjects_TimeWords)
+
+
+YM_df<-YM_df%>%
+  left_join(subjects_SwitchingPauses)
+
+
+YM_df<-YM_df%>%
+  left_join(subjects_TotalTime)
+
+
+YM_df<-YM_df%>%
+  rename(image1_totaltime = image1, image2_totaltime = image2, image3_totaltime = image3,
+         image4_totaltime = image4, image5_totaltime = image5, image6_totaltime = image6,
+         image7_totaltime = image7, image8_totaltime = image8, image9_totaltime = image9,
+         image10_totaltime = image10, image11_totaltime = image11, image12_totaltime = image12,
+         image13_totaltime = image13, image14_totaltime = image14, image15_totaltime = image15,
+         image16_totaltime = image16, image17_totaltime = image17, image18_totaltime = image18)%>%
+  mutate_at(c(6:337), as.numeric) %>%
+  rowwise() %>%
+  mutate(total_L2speechlength = sum(c(Image1_L2time,Image2_L2time, Image3_L2time, #time in seconds
+                                      Image4_L2time,Image5_L2time,Image6_L2time,
+                                      Image7_L2time,Image8_L2time,Image9_L2time,
+                                      Image10_L2time,Image11_L2time,Image12_L2time,
+                                      Image13_L2time,Image14_L2time,Image15_L2time,
+                                      Image16_L2time,Image17_L2time,Image18_L2time), na.rm = TRUE))%>%
+  mutate(total_L2uniquewords = mean(c(Image1_L2uniquewords,Image2_L2uniquewords, Image3_L2uniquewords,
+                                      Image4_L2uniquewords,Image5_L2uniquewords,Image6_L2uniquewords,
+                                      Image7_L2uniquewords,Image8_L2uniquewords,Image9_L2uniquewords,
+                                      Image10_L2uniquewords,Image11_L2uniquewords,Image12_L2uniquewords,
+                                      Image13_L2uniquewords,Image14_L2uniquewords,Image15_L2uniquewords,
+                                      Image16_L2uniquewords,Image17_L2uniquewords,Image18_L2uniquewords), na.rm = TRUE))%>%
+  mutate(avg_L2pauses = mean(c(Image1_L2pauses, Image2_L2pauses, Image3_L2pauses,
+                             Image4_L2pauses, Image5_L2pauses, Image6_L2pauses,
+                             Image7_L2pauses, Image8_L2pauses, Image9_L2pauses,
+                             Image10_L2pauses, Image11_L2pauses, Image12_L2pauses,
+                             Image13_L2pauses, Image14_L2pauses, Image15_L2pauses,
+                             Image16_L2pauses, Image17_L2pauses, Image18_L2pauses), na.rm = TRUE))%>%
+  mutate(L2_coma_rate = avg_coma / (total_L2speechlength/60),
+         L2_period_rate = avg_period / (total_L2speechlength/60),
+         L2_wc_rate = avg_wc / (total_L2speechlength/60),
+         L2_uniqueword_rate = total_L2uniquewords / (total_L2speechlength/60),
+         L2_JJR_rate = avg_JJR / (total_L2speechlength/60),
+         L2_RP_rate = avg_RP / (total_L2speechlength/60),
+         L2_VBZ_rate = avg_VBZ / (total_L2speechlength/60),
+         L2_VBG_rate = avg_VBG / (total_L2speechlength/60),
+         L2_IN_rate = avg_IN / (total_L2speechlength/60),
+         L2_pause_rate = avg_L2pauses / (total_L2speechlength/60))
+
+
+YM_df<-YM_df[,c(-13)]
+
+
+YM_df<-YM_df%>%
+  mutate(Subject_ID = `Subject ID`) %>%
+  left_join(Stroop_ErrorRate)
+
+
+YM_df<-YM_df%>%
+  left_join(Flanker_ErrorRate)
+
+
+YM_df[,339:343]
+write.csv(YM_df, file = "/Users/Documents/NLP_Bilingualism/BehavioralData/Stroop_Flanker/Bilingualism_NLP_behaivor/data/YM_df.csv")
+```
+
+
+
+
+
+
+
+
+```{r}
+# Plot L2 fluency between Indo-Europeans and Sino-Tibetans
+
+
+YM_df%>%
+  filter(`Language Family`==1 | `Language Family`==2) %>%
+  mutate(`Language Family` = as.factor(`Language Family`)) %>%
+  ggplot(aes(x = `Language Family`, y=L2_period_rate, fill = `Language Family`)) +
+  theme_classic() +
+  labs(y="Number of English sentences") +
+  geom_boxplot(show.legend = FALSE) +
+  ylim(0,1.5) +
+  geom_text(x=2, y=1.5, label = "H(1)=3.53, p=0.06") +
+  scale_x_discrete(labels=c("1" = "Sino-Tibetan", "2" = "Indo-European")) +
+  scale_fill_manual(values = c("White", "light grey"))
+
+
+YM_df%>%
+  filter(`Language Family`==1 | `Language Family`==2) %>%
+  mutate(`Language Family` = as.factor(`Language Family`)) %>%
+  ggplot(aes(x = `Language Family`, y=L2_uniqueword_rate, fill = `Language Family`)) +
+  theme_classic() +
+  geom_boxplot(show.legend = FALSE) +
+  labs(y="Number of unique words per minute") +
+  scale_x_discrete(labels=c("1" = "Sino-Tibetan", "2" = "Indo-European")) 
+
+
+YM_df%>% #use normalized JJR 
+  filter(`Language Family`==1 | `Language Family`==2) %>%
+  mutate(`Language Family` = as.factor(`Language Family`)) %>%
+  ggplot(aes(x = `Language Family`, y=L2_JJR_rate, fill = `Language Family`)) +
+  theme_classic() +
+  geom_boxplot(show.legend = FALSE) +
+  labs(y="Number of adjectives per minute") +
+  scale_x_discrete(labels=c("1" = "Sino-Tibetan", "2" = "Indo-European")) 
+
+
+L2_RP_rate_byFamily<-YM_df%>% #use normalized RP
+  filter(`Language Family`==1 | `Language Family`==2) %>%
+  mutate(`Language Family` = as.factor(`Language Family`)) %>%
+  ggplot(aes(x = `Language Family`, y=L2_RP_rate, fill = `Language Family`)) +
+  geom_boxplot(show.legend = FALSE, outlier.shape = NA) +
+  theme_classic() +
+  geom_text(x= 2, y= 0.08, label = "H(1)=4.68, p=0.03") +
+  ylim(0,0.05) +
+  labs(y="Number of particles per minute") +
+  scale_x_discrete(labels=c("1" = "Sino-Tibetan", "2" = "Indo-European")) +
+  scale_fill_manual(values = c("white", "light grey"))
+
+
+ggsave("Figures/L2_RP_rate_byFamily.pdf")
+
+
+YM_df%>% #use normalized VGZ
+  filter(`Language Family`==1 | `Language Family`==2) %>%
+  mutate(`Language Family` = as.factor(`Language Family`)) %>%
+  ggplot(aes(x = `Language Family`, y=L2_VBZ_rate, fill = `Language Family`)) +
+  geom_boxplot(show.legend = FALSE) +
+  theme_classic() +
+  labs(y="Number of verb, 3rd person singular present per minute") +
+  scale_x_discrete(labels=c("1" = "Sino-Tibetan", "2" = "Indo-European")) 
+```
+
+
+
+
+
+
+
+
+```{r}
+kruskal.test(L2_period_rate ~ `Language.Family`, data = YM_df%>%
+               filter(`Language.Family` == 1 | `Language.Family` == 2))
+kruskal.test(L2_wc_rate ~ `Language.Family`, data = YM_df%>%
+               filter(`Language.Family` == 1 | `Language.Family` == 2))
+kruskal.test(L2_uniqueword_rate ~ `Language.Family`, data = YM_df%>%
+               filter(`Language.Family` == 1 | `Language.Family` == 2))
+kruskal.test(L2_JJR_rate ~ `Language.Family`, data = YM_df%>%
+               filter(`Language.Family` == 1 | `Language.Family` == 2))
+kruskal.test(L2_RP_rate ~ `Language.Family`, data = YM_df%>%
+               filter(`Language.Family` == 1 | `Language.Family` == 2))
+kruskal.test(L2_VBZ_rate ~ `Language.Family`, data = YM_df%>%
+               filter(`Language.Family` == 1 | `Language.Family` == 2))
+kruskal.test(L2_VBG_rate ~ `Language.Family`, data = YM_df%>%
+               filter(`Language.Family` == 1 | `Language.Family` == 2))
+kruskal.test(L2_IN_rate ~ `Language.Family`, data = YM_df%>%
+               filter(`Language.Family` == 1 | `Language.Family` == 2))
+kruskal.test(L2_uniqueword_rate ~ `Language.Family`, data = YM_df%>%
+               filter(`Language.Family` == 1 | `Language.Family` == 2))
+kruskal.test(L2_coma_rate ~ `Language.Family`, data = YM_df%>%
+               filter(`Language.Family` == 1 | `Language.Family` == 2))
+kruskal.test(L2_pause_rate ~ `Language.Family`, data = YM_df%>%
+               filter(`Language.Family` == 1 | `Language.Family` == 2))
+```
+
+
+
+
+```{r}
+#Data distributions
+
+
+#RP (particle) data distribution
+YM_df%>%
+  filter(`Language Family`==1 | `Language Family`==2) %>%
+  mutate(`Language Family` = as.factor(`Language Family`))  %>%
+  mutate(`Language Family` = if_else(`Language Family`==1, "Sino-Tibetan", "Indo-European")) %>%
+  group_by(`Language Family`) %>%
+  ggplot(aes(x=L2_RP_rate)) +
+  geom_histogram(aes(y = ..density..), colour = "black", fill = "grey", binwidth = 0.025) +
+  stat_function(fun = dnorm, args = list(mean = mean(YM_df$L2_RP_rate, na.rm = TRUE),
+                                         sd=sd(YM_df$L2_RP_rate, na.rm = TRUE))) +
+  theme_classic() +
+  facet_wrap(~`Language Family`)
+
+
+YM_df%>%
+  filter(`Language Family`==1 | `Language Family`==2) %>%
+  mutate(`Language Family` = as.factor(`Language Family`))  %>%
+  mutate(`Language Family` = if_else(`Language Family`==1, "Sino-Tibetan", "Indo-European")) %>%
+  group_by(`Language Family`) %>%
+  ggplot(aes(x=L2_uniqueword_rate)) +
+  geom_histogram(aes(y = ..density..), colour = "black", fill = "grey", binwidth = 0.025) +
+  stat_function(fun = dnorm, args = list(mean = mean(YM_df$L2_uniqueword_rate, na.rm = TRUE),
+                                         sd=sd(YM_df$L2_uniqueword_rate, na.rm = TRUE))) +
+  theme_classic() +
+  facet_wrap(~`Language Family`)
+
+
+#max(YM_df$avg_RP, na.rm = TRUE)
+#min(YM_df$avg_RP, na.rm = TRUE)
+
+
+#max(YM_df$L2_RP_rate, na.rm = TRUE)
+#min(YM_df$L2_RP_rate, na.rm = TRUE)
+```
+
+
+
+
+
+
+
+
+```{r}
+## This is the stats used in Yubi's manuscript ##
+#Predict L2 fluencey wtih attenion control (Stroop and Flanker reaction time)
+RP_Stroop_Incog_RT_lm2<-lm(L2_RP_rate ~ Stroop_Incong_RTs * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(RP_Stroop_Incog_RT_lm2, 1)
+
+
+Coma_Stroop_Incog_RT_lm2<-lm(L2_coma_rate ~ Stroop_Incong_RTs * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter(Stroop_Incong_RTs < 2.25))
+summary(Coma_Stroop_Incog_RT_lm2, 1)
+
+
+Coma_Flanker_Incog_RT_lm2<-lm(L2_coma_rate ~ Flanker_Incong_RTs * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter(Stroop_Incong_RTs < 2.25))
+summary(Coma_Flanker_Incog_RT_lm2, 1)
+
+
+JJR_Stroop_Incog_RT_lm2<-lm(L2_JJR_rate ~ Stroop_Incong_RTs * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter(Stroop_Incong_RTs < 2.25))
+summary(JJR_Stroop_Incog_RT_lm2, 1)
+
+
+JJR_Flanker_Incog_RT_lm2<-lm(L2_JJR_rate ~ Flanker_Incong_RTs * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter(Stroop_Incong_RTs < 2.25))
+summary(JJR_Flanker_Incog_RT_lm2, 1)
+
+
+
+
+L2_uniqueword_rate_Stroop_Incog_RT_lm2<-lm(L2_uniqueword_rate ~ Stroop_Incong_RTs * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(L2_uniqueword_rate_Stroop_Incog_RT_lm2)
+anova(L2_uniqueword_rate_Stroop_Incog_RT_lm2)
+
+
+test2_lm2<-lm(L2_uniqueword_rate ~ Stroop_Incong_RTs * `Language.Family`, data =test2)
+summary(test2_lm2)
+anova(test2_lm2)
+
+
+
+
+
+
+L2_uniqueword_rate_Flanker_Incog_RT_lm2<-lm(L2_uniqueword_rate ~ Flanker_Incong_RTs * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(L2_uniqueword_rate_Flanker_Incog_RT_lm2)
+
+
+VBZ_Stroop_Incog_RT_lm2<-lm(L2_VBZ_rate ~ Stroop_Incong_RTs * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(VBZ_Stroop_Incog_RT_lm2)
+
+
+VBZ_Flanker_Incog_RT_lm2<-lm(L2_VBZ_rate ~ Flanker_Incong_RTs * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(VBZ_Flanker_Incog_RT_lm2)
+
+
+period_Stroop_Incog_RT_lm2<-lm(L2_period_rate ~ Stroop_Incong_RTs * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(period_Stroop_Incog_RT_lm2)
+
+
+period_Flanker_Incog_RT_lm2<-lm(L2_period_rate ~ Flanker_Incong_RTs * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(period_Flanker_Incog_RT_lm2)
+
+
+IN_Stroop_Incog_RT_lm2<-lm(L2_IN_rate ~ Stroop_Incong_RTs * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(IN_Stroop_Incog_RT_lm2)
+
+
+IN_Flanker_Incog_RT_lm2<-lm(L2_IN_rate ~ Flanker_Incong_RTs * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(IN_Flanker_Incog_RT_lm2)
+
+
+VBG_Flanker_Incog_RT_lm2<-lm(L2_VBG_rate ~ Flanker_Incong_RTs * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(VBG_Flanker_Incog_RT_lm2)
+
+
+VBG_Stroop_Incog_RT_lm2<-lm(L2_VBG_rate ~ Stroop_Incong_RTs * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(VBG_Stroop_Incog_RT_lm2)
+
+
+Pauses_Stroop_Incong_RT_lm2<-lm(L2_pause_rate ~ Stroop_Incong_RTs * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(Pauses_Stroop_Incong_RT_lm2)
+```
+
+
+
+
+
+
+
+
+
+
+```{r}
+#This is als ot the stats used in Yubi's manuscript
+#Predict L2 fluency with attention control (Stroop and Flanker error rates)
+
+
+RP_Stroop_Incong_incorrect_lm<-lm(L2_RP_rate ~ Stroop_Incongruent_incorrect_rate* `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(RP_Stroop_Incong_incorrect_lm)
+
+
+RP_Stroop_Cong_incorrect_lm<-lm(L2_RP_rate ~ Stroop_Congruent_incorrect_rate * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(RP_Stroop_Cong_incorrect_lm)
+
+
+Coma_Stroop_Incong_incorrect_lm<-lm(L2_coma_rate ~ Stroop_Incongruent_incorrect_rate * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(Coma_Stroop_Incong_incorrect_lm)
+
+
+Coma_Stroop_Cong_incorrect_lm<-lm(L2_coma_rate ~ Stroop_Congruent_incorrect_rate * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(Coma_Stroop_Cong_incorrect_lm)
+
+
+JJR_Stroop_Incong_incorrect_lm<-lm(L2_JJR_rate ~ Stroop_Incongruent_incorrect_rate * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(JJR_Stroop_Incong_incorrect_lm)
+
+
+JJR_Stroop_Cong_incorrect_lm<-lm(L2_JJR_rate ~ Stroop_Congruent_incorrect_rate * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(JJR_Stroop_Cong_incorrect_lm)
+
+
+
+
+L2_uniqueword_rate_Stroop_Incong_incorrectr_lm<-lm(L2_uniqueword_rate ~ Stroop_Incongruent_incorrect_rate * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(L2_uniqueword_rate_Stroop_Incong_incorrectr_lm)
+anova(L2_uniqueword_rate_Stroop_Incong_incorrectr_lm)
+
+
+L2_uniqueword_rate_Stroop_Cong_incorrect_lm<-lm(L2_uniqueword_rate ~ Stroop_Congruent_incorrect_rate * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(L2_uniqueword_rate_Stroop_Cong_incorrect_lm)
+
+
+VBZ_Stroop_Incong_incorrrect_lm<-lm(L2_VBZ_rate ~ Stroop_Incongruent_incorrect_rate * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(VBZ_Stroop_Incong_incorrrect_lm)
+
+
+VBZ_Flanker_Stroop_Cong_incorrect_lm<-lm(L2_VBZ_rate ~ Stroop_Congruent_incorrect_rate * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(VBZ_Flanker_Stroop_Cong_incorrect_lm)
+
+
+period_Stroop_Incong_incorrect_lm<-lm(L2_period_rate ~ Stroop_Incongruent_incorrect_rate * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(period_Stroop_Incong_incorrect_lm)
+
+
+period_Stroop_Cong_incorrect_lm<-lm(L2_period_rate ~ Stroop_Congruent_incorrect_rate * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(period_Stroop_Cong_incorrect_lm)
+
+
+IN_Stroop_Incong_incorrect_lm<-lm(L2_IN_rate ~ Stroop_Incongruent_incorrect_rate * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(IN_Stroop_Incong_incorrect_lm)
+
+
+IN_Stroop_Cong_incorrect_lm<-lm(L2_IN_rate ~ Stroop_Congruent_incorrect_rate * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(IN_Stroop_Cong_incorrect_lm)
+
+
+VBG_Stroop_Incong_incorrect_lm<-lm(L2_VBG_rate ~ Stroop_Incongruent_incorrect_rate * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(VBG_Stroop_Incong_incorrect_lm)
+
+
+VBG_Stroop_Cong_incorrect_lm<-lm(L2_VBG_rate ~ Stroop_Congruent_incorrect_rate * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(VBG_Stroop_Cong_incorrect_lm)
+
+
+Pauses_Stroop_Incong_incorrect_lm<-lm(L2_pause_rate ~ Stroop_Incongruent_incorrect_rate * `Language.Family`, data = YM_df%>%
+                              filter(`Language.Family`==1 | `Language.Family`==2) %>%
+                              mutate(`Language.Family` = as.factor(`Language.Family`))%>%
+                              mutate(Age = as.numeric(Age))%>%
+                              filter( Stroop_Incong_RTs < 2.25))
+summary(Pauses_Stroop_Incong_incorrect_lm)
+```
+
+
+
+
+
+
+```{r}
+#Make Stroop RT and RP correlation plot
+ grey_theme<-theme(axis.text.x = element_text(colour = "grey20", size = 15, hjust = 0.5, vjust = 0.5),
+                        axis.text.y = element_text(colour = "grey20", size = 15),
+                        strip.text = element_text(face = "italic"),
+                        text = element_text(size = 16))
+
+
+
+
+Stroop_Incong_incorrect_rate_L2_uniqueword<-YM_df%>%
+    filter(`Language Family`==1 | `Language Family`==2) %>%
+    mutate(`Language Family` = as.factor(`Language Family`))  %>%
+    mutate(`Language Family` = if_else(`Language Family`==1, "Sino-Tibetan", "Indo-European")) %>%
+    ggplot(aes(x=Stroop_Incongruent_incorrect_rate, y=L2_uniqueword_rate)) +
+    geom_point(position = position_jitter(w = 0.005, h = 0.3), alpha = 0.5, size = 3) +
+    geom_smooth(method = lm) +
+    theme_classic() +
+    ylim(0,10) +
+    labs(x="Error rate in Stroop task", y="Number of unique words per minute") +
+    geom_text(x=0.05, y=10, label = "R-squared = 0.17, p = 0.02")
+
+
+Stroop_Incong_incorrect_rate_L2_period<-YM_df%>%
+    filter(`Language Family`==1 | `Language Family`==2) %>%
+    mutate(`Language Family` = as.factor(`Language Family`))  %>%
+    mutate(`Language Family` = if_else(`Language Family`==1, "Sino-Tibetan", "Indo-European")) %>%
+    ggplot(aes(x=Stroop_Incongruent_incorrect_rate, y=L2_period_rate)) +
+    geom_point(position = position_jitter(w = 0.005, h = 0.3), alpha = 0.5, size = 3) +
+    geom_smooth(method = lm) +
+    theme_classic()
+
+
+Stroop_Incong_incorrect_rate_L2<-plot_grid(Stroop_Incong_incorrect_rate_L2_uniqueword,Stroop_Incong_incorrect_rate_L2_period)
+
+
+ggsave("Stroop_Incong_incorrect_rate_L2_period.pdf", Stroop_Incong_incorrect_rate_L2_period)
+
+
+L2_period_rate_Stroop_Incong_RTs_corr_plot<-YM_df%>%
+    filter(`Language Family`==1 | `Language Family`==2) %>%
+    mutate(`Language Family` = as.factor(`Language Family`))  %>%
+    mutate(`Language Family` = if_else(`Language Family`==1, "Sino-Tibetan", "Indo-European")) %>%
+    ggplot(aes(x=Stroop_Incong_RTs, y=L2_period_rate)) +
+    geom_point(position = position_jitter(w = 0.07, h = 0.3), alpha = 0.5, size = 3) +
+    geom_smooth(method = lm) +
+    theme_classic() +
+    #ylim(0,13) +
+    #xlim(0,10.5) +
+    labs(x="Reaction time in (seconds)", y="Number of sentences per minute") +
+    geom_text(label = "R-squared = 0.240, p = 0.003", x=1, y=12.5) 
+
+
+L2_uniqueword_rate_Stroop_Incong_RTs_corr_plot<-YM_df%>%
+    filter(`Language Family`==1 | `Language Family`==2) %>%
+    mutate(`Language Family` = as.factor(`Language Family`))  %>%
+    mutate(`Language Family` = if_else(`Language Family`==1, "Sino-Tibetan", "Indo-European")) %>%
+    ggplot(aes(x=Stroop_Incong_RTs, y=L2_uniqueword_rate)) +
+    geom_point(position = position_jitter(w = 0.001, h = 0.3), alpha = 0.5, size = 3) +
+    geom_smooth(method = lm) +
+    theme_classic() +
+    ylim(0,10) +
+    #xlim(0,2.25) +
+    labs(x="Reaction time (seconds)", y="Number of unique words per minute") +
+    geom_text(label = "R-squared = 0.240, p = 0.003", x=1.3, y=10) 
+
+
+plot_grid(L2_period_rate_Stroop_Incong_RTs_corr_plot,L2_uniqueword_rate_Stroop_Incong_RTs_corr_plot)
+ggsave("Figures/L2_uniqueword_rate_Stroop_RTs.pdf", L2_uniqueword_rate_Stroop_RTs)
+
+
+L2_uniqueword_rate_Stroop_Cong_RTs_corr_plot_grey_theme <-L2_uniqueword_rate_Stroop_Cong_RTs_corr_plot+grey_theme
+ggsave("Figures/L2_uniqueword_rate_Stroop_Cong_RTs_corr_plot_grey_theme.pdf")
+
+
+L2_uniqueword_rate_Stroop <-plot_grid(Stroop_Incong_incorrect_rate_L2_uniqueword,L2_uniqueword_rate_Stroop_Incong_RTs_corr_plot)
+ggsave("Figures/L2_uniqueword_rate_Stroop.pdf")
+```
+
+
+
+
+```{r, results='hide', echo=TRUE}
+# Run correlation analyses between RT and RP across language families.
+#Run the correlation analysis between RP and Stroop/Flanker RT
+
+
+cor.test(YM_df$avg_RP, YM_df$Stroop_Cong_RTs)
+cor.test(YM_df$avg_RP, YM_df$Stroop_Incong_RTs)
+cor.test(YM_df$avg_RP, YM_df$Flanker_Cong_RTs)
+cor.test(YM_df$avg_RP, YM_df$Flanker_Incong_RTs)
+
+
+cor.test(YM_df$L2_RP_rate, YM_df$Stroop_Cong_RTs)
+cor.test(YM_df$L2_RP_rate, YM_df$Stroop_Incong_RTs)
+cor.test(YM_df$L2_RP_rate, YM_df$Flanker_Cong_RTs)
+cor.test(YM_df$L2_RP_rate, YM_df$Flanker_Incong_RTs)
+
+
+cor.test(YM_df$avg_JJR, YM_df$Stroop_Cong_RTs)
+cor.test(YM_df$avg_JJR, YM_df$Stroop_Incong_RTs)
+cor.test(YM_df$avg_JJR, YM_df$Flanker_Cong_RTs)
+cor.test(YM_df$avg_JJR, YM_df$Flanker_Incong_RTs)
+
+
+cor.test(YM_df$L2_JJR_rate, YM_df$Stroop_Cong_RTs)
+cor.test(YM_df$L2_JJR_rate, YM_df$Stroop_Incong_RTs)
+cor.test(YM_df$L2_JJR_rate, YM_df$Flanker_Cong_RTs)
+cor.test(YM_df$L2_JJR_rate, YM_df$Flanker_Incong_RTs)
+
+
+cor.test(YM_df$avg_period, YM_df$Stroop_Cong_RTs)
+cor.test(YM_df$avg_period, YM_df$Stroop_Incong_RTs)
+cor.test(YM_df$avg_period, YM_df$Flanker_Cong_RTs)
+cor.test(YM_df$avg_period, YM_df$Flanker_Incong_RTs)
+
+
+cor.test(YM_df$L2_period_rate, YM_df$Stroop_Cong_RTs)
+cor.test(YM_df$L2_period_rate, YM_df$Stroop_Incong_RTs)
+cor.test(YM_df$L2_period_rate, YM_df$Flanker_Cong_RTs)
+cor.test(YM_df$L2_period_rate, YM_df$Flanker_Incong_RTs)
+cor.test(YM_df$L2_period_rate, YM_df$Stroop_Incongruent_incorrect_rate)
+
+
+cor.test(YM_df$avg_VBZ, YM_df$Stroop_Cong_RTs)
+cor.test(YM_df$avg_VBZ, YM_df$Stroop_Incong_RTs)
+cor.test(YM_df$avg_VBZ, YM_df$Flanker_Cong_RTs)
+cor.test(YM_df$avg_VBZ, YM_df$Flanker_Incong_RTs)
+
+
+cor.test(YM_df$L2_VBZ_rate, YM_df$Stroop_Cong_RTs)
+cor.test(YM_df$L2_VBZ_rate, YM_df$Stroop_Incong_RTs)
+cor.test(YM_df$L2_VBZ_rate, YM_df$Flanker_Cong_RTs)
+cor.test(YM_df$L2_VBZ_rate, YM_df$Flanker_Incong_RTs)
+
+
+cor.test(YM_df$avg_wc, YM_df$Stroop_Cong_RTs)
+cor.test(YM_df$avg_wc, YM_df$Stroop_Incong_RTs)
+cor.test(YM_df$avg_wc, YM_df$Flanker_Cong_RTs)
+cor.test(YM_df$avg_wc, YM_df$Flanker_Incong_RTs)
+
+
+cor.test(YM_df$L2_uniqueword_rate, YM_df$Stroop_Cong_RTs)
+cor.test(YM_df$L2_uniqueword_rate, YM_df$Stroop_Incong_RTs)
+cor.test(YM_df$L2_uniqueword_rate, YM_df$Flanker_Cong_RTs)
+cor.test(YM_df$L2_uniqueword_rate, YM_df$Flanker_Incong_RTs)
+cor.test(YM_df$L2_uniqueword_rate, YM_df$Stroop_Incongruent_incorrect_rate)
+```
